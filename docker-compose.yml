@@ -56,7 +56,7 @@ services:
     ports:
       - 5431:5432
     volumes:
-      - xnat-postgres-data:/var/lib/postgresql/data
+      - xnat-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=${XNAT_DATASOURCE_ADMIN_PASSWORD}
       - POSTGRES_DB=${XNAT_DATASOURCE_NAME}
@@ -89,6 +89,8 @@ services:
       - 8000:8000
     volumes:
       - static-data:/var/www/app/static
+      - ./src/mosamaticweb:/usr/src/app # remove in production!
+      - ./docker-entrypoint.sh:/usr/src/app/docker-entrypoint.sh # remove in production!
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"]
       interval: 10s
@@ -96,8 +98,6 @@ services:
       retries: 3
     depends_on:
       db:
-        condition: service_healthy
-      minio:
         condition: service_healthy
 
   redis:
@@ -142,6 +142,7 @@ services:
 
 volumes:
   db-data:
+  xnat-data:
   static-data:
 
 networks:
