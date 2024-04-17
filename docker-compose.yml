@@ -1,0 +1,149 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:15.2-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=foobar
+      - POSTGRES_DB=db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    expose:
+      - 5432
+    ports:
+      - 5432:5432 # Required for running Django outside Docker but using PostgreSQL
+    volumes: 
+      - db-data:/var/lib/postgresql/data
+
+  xnat-web:
+    build:
+      context: ./xnat/xnat
+      args:
+        XNAT_VERSION: ${XNAT_VERSION}
+        XNAT_SMTP_ENABLED: ${XNAT_SMTP_ENABLED}
+        XNAT_SMTP_HOSTNAME: ${XNAT_SMTP_HOSTNAME}
+        XNAT_SMTP_PORT: ${XNAT_SMTP_PORT}
+        XNAT_SMTP_AUTH: ${XNAT_SMTP_AUTH}
+        XNAT_SMTP_USERNAME: ${XNAT_SMTP_USERNAME}
+        XNAT_SMTP_PASSWORD: ${XNAT_SMTP_PASSWORD}
+        XNAT_DATASOURCE_DRIVER: ${XNAT_DATASOURCE_DRIVER}
+        XNAT_DATASOURCE_URL: ${XNAT_DATASOURCE_URL}
+        XNAT_DATASOURCE_USERNAME: ${XNAT_DATASOURCE_USERNAME}
+        XNAT_DATASOURCE_PASSWORD: ${XNAT_DATASOURCE_PASSWORD}
+        TOMCAT_XNAT_FOLDER: ${TOMCAT_XNAT_FOLDER}
+        XNAT_ROOT: ${XNAT_ROOT}
+        XNAT_HOME: ${XNAT_HOME}
+        XNAT_EMAIL: ${XNAT_EMAIL}
+    ports:
+      - 8104:8104
+    depends_on:
+      - xnat-db
+    environment:
+      - CATALINA_OPTS=-Xms${XNAT_MIN_HEAP} -Xmx${XNAT_MAX_HEAP} -Dxnat.home=${XNAT_HOME}
+      - XNAT_HOME=${XNAT_HOME}
+
+  xnat-db:
+    build:
+      context: ./xnat/postgres
+    expose:
+      - 5431
+    ports:
+      - 5431:5432
+    volumes:
+      - xnat-postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${XNAT_DATASOURCE_ADMIN_PASSWORD}
+      - POSTGRES_DB=${XNAT_DATASOURCE_NAME}
+      - XNAT_DATASOURCE_USERNAME=${XNAT_DATASOURCE_USERNAME}
+      - XNAT_DATASOURCE_PASSWORD=${XNAT_DATASOURCE_PASSWORD}
+
+  xnat-nginx:
+    build:
+      context: ./xnat/nginx
+    ports:
+      - 80:80
+    expose:
+      - 80
+    depends_on:
+      - xnat-web
+    links:
+      - xnat-web
+
+  app:
+    build: .
+    image: mosamaticweb
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=foobar
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+    ports:
+      - 8000:8000
+    volumes:
+      - static-data:/var/www/app/static
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  redis:
+    image: redis:alpine
+    expose:
+      - 6379
+    ports:
+      - 6379:6379
+
+  celery:
+    build: .
+    command: celery --app mosamaticweb worker --loglevel=info -n celery@%h
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=foobar
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+    healthcheck:
+      test: ["CMD", "celery", "--app", "mosamaticweb", "inspect", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      app:
+        condition: service_healthy
+
+  celerybeat:
+    build: .
+    command: celery --app mosamaticweb beat --loglevel=info
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=foobar
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+    depends_on:
+      celery:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  static-data:
+
+networks:
+  default:
+    name: mosamaticweb

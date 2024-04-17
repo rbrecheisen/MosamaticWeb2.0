@@ -1,0 +1,14 @@
+django
+django-jinja
+django-session-security
+django-guardian
+django-crispy-forms
+oauthlib
+requests-oauthlib
+crispy-bootstrap5
+psycopg2-binary
+celery
+django-celery-beat
+redis
+pendulum
+xnat
