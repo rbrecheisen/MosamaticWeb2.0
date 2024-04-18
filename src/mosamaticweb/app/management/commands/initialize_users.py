@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 
 class Command(BaseCommand):
-    help = 'Initializes users'
+    help = 'Initialize users'
 
     def handle(self, *args, **kwargs):
         user = User.objects.filter(username='admin').first()

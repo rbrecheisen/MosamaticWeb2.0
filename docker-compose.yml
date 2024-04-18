@@ -85,9 +85,11 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
       - REDIS_HOST=redis
+      - DATA_DIR=/var/www/app/data
     ports:
       - 8000:8000
     volumes:
+      - app-data:/var/www/app/data
       - static-data:/var/www/app/static
       - ./src/mosamaticweb:/usr/src/app # remove in production!
       - ./docker-entrypoint.sh:/usr/src/app/docker-entrypoint.sh # remove in production!
@@ -117,11 +119,14 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
       - REDIS_HOST=redis
+      - DATA_DIR=/var/www/app/data
     healthcheck:
       test: ["CMD", "celery", "--app", "mosamaticweb", "inspect", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
+    volumes:
+      - app-data:/var/www/app/data
     depends_on:
       app:
         condition: service_healthy
@@ -136,12 +141,16 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
       - REDIS_HOST=redis
+      - DATA_DIR=/var/www/app/data
+    volumes:
+      - app-data:/var/www/app/data
     depends_on:
       celery:
         condition: service_healthy
 
 volumes:
   db-data:
+  app-data:
   xnat-data:
   static-data:
 

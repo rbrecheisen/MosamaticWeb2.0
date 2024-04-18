@@ -140,11 +140,13 @@ LOGGING = {
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 
+# Celery tasks
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CELERYD_HIJACK_ROOT_LOGGER = False
 
+# Login
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
@@ -152,6 +154,10 @@ LOGOUT_REDIRECT_URL = '/'
 SESSION_SECURITY_WARN_AFTER = 840
 SESSION_SECURITY_EXPIRE_AFTER = 3600
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Uploaded data location
+DATA_DIR = os.getenv('DATA_DIR', '/tmp/mosamaticweb/data')
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
