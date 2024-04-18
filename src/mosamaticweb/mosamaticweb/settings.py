@@ -159,6 +159,10 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 DATA_DIR = os.getenv('DATA_DIR', '/tmp/mosamaticweb/data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
+MEDIA_URL = '/datasets/'
+MEDIA_ROOT = os.path.join(DATA_DIR, 'datasets')
+UPLOAD_ROOT = os.path.join(DATA_DIR, 'uploads')
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
